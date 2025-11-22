@@ -11,7 +11,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-registerFont(path.join(__dirname, "fonts/Roboto-Regular.ttf"), { family: "Roboto" });
+ctx.font = `bold 50px sans-serif`;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
