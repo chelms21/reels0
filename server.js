@@ -1,38 +1,40 @@
+// server.js
 import express from "express";
 import fs from "fs";
 import path from "path";
 import fetch from "node-fetch";
-import { createCanvas, loadImage, registerFont } from "canvas";
+import { createCanvas, loadImage } from "canvas";
 import ffmpeg from "fluent-ffmpeg";
-
-// Optionally register a font
 import { fileURLToPath } from "url";
 
+// --------------------
+// ES module __dirname fix
+// --------------------
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-ctx.font = `bold 50px sans-serif`;
-
+// --------------------
+// App setup
+// --------------------
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// --------------------
+// Config
+// --------------------
 const BACKGROUNDS = [
-  "./backgrounds/bg1.jpg",
-  "./backgrounds/bg2.jpg",
-  "./backgrounds/bg3.jpg",
-  "./backgrounds/bg4.jpg",
-  "./backgrounds/bg5.jpg",
-  "./backgrounds/bg6.jpg",
-  "./backgrounds/bg7.jpg",
-  "./backgrounds/bg8.jpg",
-  "./backgrounds/bg9.jpg"
+  path.join(__dirname, "backgrounds/bg1.jpg"),
+  path.join(__dirname, "backgrounds/bg2.jpg"),
+  path.join(__dirname, "backgrounds/bg3.jpg"),
+  path.join(__dirname, "backgrounds/bg4.jpg"),
+  path.join(__dirname, "backgrounds/bg5.jpg")
 ];
 
 const VERSES_URL = "https://raw.githubusercontent.com/chelms21/test-picture-thing/main/verses.js";
 
-// ---------------------
+// --------------------
 // Utility: wrap text
-// ---------------------
+// --------------------
 function wrapText(ctx, text, maxWidth) {
   const words = text.split(" ");
   const lines = [];
@@ -50,9 +52,9 @@ function wrapText(ctx, text, maxWidth) {
   return lines;
 }
 
-// ---------------------
+// --------------------
 // Fetch verses dynamically
-// ---------------------
+// --------------------
 async function loadVerses() {
   const res = await fetch(VERSES_URL);
   const jsText = await res.text();
@@ -63,18 +65,23 @@ async function loadVerses() {
     export { VERSES };
   `;
 
-  const blobPath = path.join(__dirname, "verses-temp.mjs");
-  fs.writeFileSync(blobPath, wrappedText);
+  const tempPath = path.join(__dirname, "verses-temp.mjs");
+  fs.writeFileSync(tempPath, wrappedText);
 
-  const module = await import(`file://${blobPath}`);
-  fs.unlinkSync(blobPath);
+  const module = await import(`file://${tempPath}`);
+  fs.unlinkSync(tempPath);
 
   return module.VERSES;
 }
 
-// ---------------------
-// Main endpoint
-// ---------------------
+// --------------------
+// Ping endpoint
+// --------------------
+app.get("/ping", (req, res) => res.send("pong"));
+
+// --------------------
+// Main video generator
+// --------------------
 app.get("/generate-video", async (req, res) => {
   try {
     const VERSES = await loadVerses();
@@ -88,17 +95,18 @@ app.get("/generate-video", async (req, res) => {
 
     const bg = await loadImage(bgPath);
 
-    // Generate frames
+    // Frame settings
     const FPS = 15;
     const DURATION = 10; // seconds
     const totalFrames = FPS * DURATION;
-    const frameDir = path.join("./frames");
+    const frameDir = path.join(__dirname, "frames");
     if (!fs.existsSync(frameDir)) fs.mkdirSync(frameDir);
 
+    // Generate frames
     for (let i = 0; i < totalFrames; i++) {
       ctx.drawImage(bg, 0, 0, canvasWidth, canvasHeight);
 
-      ctx.font = `bold 50px "Roboto"`;
+      ctx.font = `bold 50px sans-serif`;
       ctx.fillStyle = "white";
       ctx.textAlign = "center";
       ctx.shadowColor = "rgba(0,0,0,0.7)";
@@ -117,8 +125,9 @@ app.get("/generate-video", async (req, res) => {
     }
 
     // Output video
-    const outputPath = path.join("./output", `bible-video-${Date.now()}.mp4`);
-    if (!fs.existsSync("./output")) fs.mkdirSync("./output");
+    const outputDir = path.join(__dirname, "output");
+    if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
+    const outputPath = path.join(outputDir, `bible-video-${Date.now()}.mp4`);
 
     ffmpeg()
       .input(path.join(frameDir, "frame%04d.png"))
@@ -127,8 +136,9 @@ app.get("/generate-video", async (req, res) => {
       .output(outputPath)
       .on("end", () => {
         // Clean frames
-        fs.readdirSync(frameDir).forEach(file => fs.unlinkSync(path.join(frameDir, file)));
+        fs.readdirSync(frameDir).forEach(f => fs.unlinkSync(path.join(frameDir, f)));
 
+        // Send video
         res.download(outputPath, "bible-verse-video.mp4", err => {
           if (err) console.error(err);
           fs.unlinkSync(outputPath);
@@ -146,4 +156,7 @@ app.get("/generate-video", async (req, res) => {
   }
 });
 
+// --------------------
+// Start server
+// --------------------
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
