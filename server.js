@@ -20,8 +20,7 @@ const BACKGROUNDS = [
   "./backgrounds/bg6.jpg",
   "./backgrounds/bg7.jpg",
   "./backgrounds/bg8.jpg",
-  "./backgrounds/bg9.jpg",
-  "./backgrounds/bg10.jpg"
+  "./backgrounds/bg9.jpg"
 ];
 
 const VERSES_URL = "https://raw.githubusercontent.com/chelms21/test-picture-thing/main/verses.js";
