@@ -6,6 +6,11 @@ import { createCanvas, loadImage, registerFont } from "canvas";
 import ffmpeg from "fluent-ffmpeg";
 
 // Optionally register a font
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 registerFont(path.join(__dirname, "fonts/Roboto-Regular.ttf"), { family: "Roboto" });
 
 const app = express();
